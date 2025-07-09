@@ -105,7 +105,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         <p className="text-white/80 text-lg">Welcome back! Please sign in to continue.</p>
         {/* Show admin badge if the email input is admin@example.com */}
         {username.trim().toLowerCase() === 'admin@example.com' && (
-          <span className="inline-block mt-2 px-3 py-1 bg-yellow-500 text-white rounded-full text-sm font-semibold">Admin Login</span>
+          <span className="inline-block mt-2 mb-2 px-4 py-2 bg-yellow-500 text-white rounded-full text-base font-semibold shadow-md transition-transform duration-200 transform hover:scale-105 w-full max-w-xs mx-auto block text-center sm:text-sm sm:px-3 sm:py-1">
+            Admin Login
+          </span>
         )}
       </div>
       <div className="w-full max-w-md z-10">
