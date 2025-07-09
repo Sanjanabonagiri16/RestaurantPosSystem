@@ -55,6 +55,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       role: profile.role,
       id: profile.id,
     });
+    // After successful login, store user role in localStorage
+    if (profile && profile.role) {
+      localStorage.setItem('userRole', profile.role);
+    }
     setIsLoading(false);
   };
 
@@ -99,6 +103,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         </div>
         <h1 className="text-4xl font-bold text-white mb-2">Restaurant Management</h1>
         <p className="text-white/80 text-lg">Welcome back! Please sign in to continue.</p>
+        {/* Show admin badge if the email input is admin@example.com */}
+        {username.trim().toLowerCase() === 'admin@example.com' && (
+          <span className="inline-block mt-2 px-3 py-1 bg-yellow-500 text-white rounded-full text-sm font-semibold">Admin Login</span>
+        )}
       </div>
       <div className="w-full max-w-md z-10">
         {!showSignUp ? (
