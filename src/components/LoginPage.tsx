@@ -78,11 +78,18 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     }
     const { user } = data;
     if (!user) {
+      console.error('Sign up failed: No user returned from Supabase Auth', data);
       toast.error('Sign up failed: No user returned.');
       setSignUpLoading(false);
       return;
     }
     // 2. Insert into public.users
+    console.log('Attempting to insert user profile:', {
+      username: signUpUsername,
+      password_hash: 'supabase_auth',
+      role: 'waiter',
+      auth_user_id: user.id,
+    });
     const { error: insertError } = await supabase
       .from('users')
       .insert({
@@ -92,13 +99,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         auth_user_id: user.id, // Ensure this is set and unique
       });
     if (insertError) {
-      if (insertError.message.includes('duplicate key value')) {
-        toast.error('Sign up failed: Username already taken.');
-      } else if (insertError.message.includes('violates foreign key constraint')) {
-        toast.error('Sign up failed: Auth user not found.');
-      } else {
-        toast.error('Sign up failed: Database error saving new user');
-      }
+      console.error('Insert user profile error:', insertError);
+      toast.error('Sign up failed: ' + insertError.message);
       setSignUpLoading(false);
       return;
     }
