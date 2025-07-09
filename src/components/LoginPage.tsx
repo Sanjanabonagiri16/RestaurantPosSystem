@@ -31,7 +31,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       password,
     });
     if (error) {
-      toast.error('Login failed: ' + error.message);
+      if (error.message.toLowerCase().includes('invalid login credentials')) {
+        toast.error('Login failed: Invalid email or password.');
+      } else {
+        toast.error('Login failed: ' + error.message);
+      }
       setIsLoading(false);
       return;
     }
@@ -64,7 +68,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
       password: signUpPassword,
     });
     if (error) {
-      toast.error('Sign up failed: ' + error.message);
+      if (error.message.includes('already registered')) {
+        toast.error('Sign up failed: Email already registered.');
+      } else {
+        toast.error('Sign up failed: ' + error.message);
+      }
       setSignUpLoading(false);
       return;
     }
@@ -81,10 +89,16 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         username: signUpUsername,
         password_hash: 'supabase_auth', // Not used, but required by schema
         role: 'waiter', // Default role
-        auth_user_id: user.id,
+        auth_user_id: user.id, // Ensure this is set and unique
       });
     if (insertError) {
-      toast.error('Profile creation failed: ' + insertError.message);
+      if (insertError.message.includes('duplicate key value')) {
+        toast.error('Sign up failed: Username already taken.');
+      } else if (insertError.message.includes('violates foreign key constraint')) {
+        toast.error('Sign up failed: Auth user not found.');
+      } else {
+        toast.error('Sign up failed: Database error saving new user');
+      }
       setSignUpLoading(false);
       return;
     }
