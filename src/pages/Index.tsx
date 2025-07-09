@@ -13,7 +13,8 @@ export interface User {
 
 export interface Table {
   id: number;
-  status: 'available' | 'occupied';
+  status: 'available' | 'occupied' | 'reserved';
+  seatCount?: number;
 }
 
 export interface MenuItem {
@@ -63,7 +64,8 @@ const Index = () => {
       if (tablesData) {
         setTables(tablesData.map(table => ({
           id: table.id,
-          status: table.status as 'available' | 'occupied'
+          status: table.status as 'available' | 'occupied' | 'reserved',
+          seatCount: table.seat_count
         })));
       }
 

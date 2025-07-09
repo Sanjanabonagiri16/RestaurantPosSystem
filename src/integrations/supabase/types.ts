@@ -118,16 +118,19 @@ export type Database = {
       restaurant_tables: {
         Row: {
           id: number
+          seat_count: number | null
           status: Database["public"]["Enums"]["table_status"]
           updated_at: string | null
         }
         Insert: {
           id?: number
+          seat_count?: number | null
           status?: Database["public"]["Enums"]["table_status"]
           updated_at?: string | null
         }
         Update: {
           id?: number
+          seat_count?: number | null
           status?: Database["public"]["Enums"]["table_status"]
           updated_at?: string | null
         }
@@ -169,7 +172,7 @@ export type Database = {
     }
     Enums: {
       order_status: "active" | "preparing" | "served"
-      table_status: "available" | "occupied"
+      table_status: "available" | "occupied" | "reserved"
       user_role: "waiter" | "admin"
     }
     CompositeTypes: {
@@ -299,7 +302,7 @@ export const Constants = {
   public: {
     Enums: {
       order_status: ["active", "preparing", "served"],
-      table_status: ["available", "occupied"],
+      table_status: ["available", "occupied", "reserved"],
       user_role: ["waiter", "admin"],
     },
   },
