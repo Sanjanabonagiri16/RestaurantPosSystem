@@ -1,5 +1,6 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import LoginPage from '../components/LoginPage';
 import Dashboard from '../components/Dashboard';
 import OrderView from '../components/OrderView';
@@ -40,24 +41,93 @@ const Index = () => {
   const [user, setUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<'dashboard' | 'order' | 'admin'>('dashboard');
   const [selectedTable, setSelectedTable] = useState<number | null>(null);
-  const [tables, setTables] = useState<Table[]>(
-    Array.from({ length: 16 }, (_, i) => ({
-      id: i + 1,
-      status: Math.random() > 0.7 ? 'occupied' : 'available'
-    }))
-  );
+  const [tables, setTables] = useState<Table[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const menuItems: MenuItem[] = [
-    { id: 1, name: "Margherita Pizza", price: 12.99, category: "Pizza" },
-    { id: 2, name: "Caesar Salad", price: 8.99, category: "Salads" },
-    { id: 3, name: "Grilled Chicken", price: 15.99, category: "Mains" },
-    { id: 4, name: "Fish & Chips", price: 14.99, category: "Mains" },
-    { id: 5, name: "Pasta Carbonara", price: 13.99, category: "Pasta" },
-    { id: 6, name: "Chocolate Cake", price: 6.99, category: "Desserts" },
-    { id: 7, name: "Coffee", price: 3.99, category: "Beverages" },
-    { id: 8, name: "Orange Juice", price: 4.99, category: "Beverages" },
-  ];
+  // Load data from Supabase
+  useEffect(() => {
+    loadInitialData();
+  }, []);
+
+  const loadInitialData = async () => {
+    setLoading(true);
+    try {
+      // Load tables
+      const { data: tablesData } = await supabase
+        .from('restaurant_tables')
+        .select('*')
+        .order('id');
+      
+      if (tablesData) {
+        setTables(tablesData.map(table => ({
+          id: table.id,
+          status: table.status as 'available' | 'occupied'
+        })));
+      }
+
+      // Load menu items
+      const { data: menuData } = await supabase
+        .from('menu_items')
+        .select('*')
+        .eq('available', true)
+        .order('category, name');
+      
+      if (menuData) {
+        setMenuItems(menuData.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: parseFloat(item.price.toString()),
+          category: item.category
+        })));
+      }
+
+      // Load orders
+      await loadOrders();
+    } catch (error) {
+      console.error('Error loading initial data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadOrders = async () => {
+    try {
+      const { data: ordersData } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            menu_items (*)
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (ordersData) {
+        const formattedOrders = ordersData.map(order => ({
+          id: order.id,
+          tableId: order.table_id,
+          items: order.order_items.map((item: any) => ({
+            menuItem: {
+              id: item.menu_items.id,
+              name: item.menu_items.name,
+              price: parseFloat(item.price), // Use stored price from order
+              category: item.menu_items.category
+            },
+            quantity: item.quantity
+          })),
+          total: parseFloat(order.total.toString()),
+          status: order.status as 'active' | 'preparing' | 'served',
+          timestamp: new Date(order.created_at)
+        }));
+        setOrders(formattedOrders);
+      }
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    }
+  };
 
   const handleLogin = (userData: User) => {
     setUser(userData);
@@ -77,28 +147,56 @@ const Index = () => {
     }
   };
 
-  const handleOrderPlace = (orderItems: OrderItem[]) => {
+  const handleOrderPlace = async (orderItems: OrderItem[]) => {
     if (!selectedTable) return;
 
-    const total = orderItems.reduce((sum, item) => sum + (item.menuItem.price * item.quantity), 0);
-    const newOrder: Order = {
-      id: Date.now().toString(),
-      tableId: selectedTable,
-      items: orderItems,
-      total,
-      status: 'active',
-      timestamp: new Date()
-    };
+    try {
+      const total = orderItems.reduce((sum, item) => sum + (item.menuItem.price * item.quantity), 0);
+      
+      // Create order in database
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          table_id: selectedTable,
+          total: total,
+          status: 'active'
+        })
+        .select()
+        .single();
 
-    setOrders(prev => [...prev, newOrder]);
-    setTables(prev => prev.map(table => 
-      table.id === selectedTable 
-        ? { ...table, status: 'occupied' as const }
-        : table
-    ));
+      if (orderError) throw orderError;
 
-    setCurrentView('dashboard');
-    setSelectedTable(null);
+      // Create order items
+      const orderItemsData = orderItems.map(item => ({
+        order_id: orderData.id,
+        menu_item_id: item.menuItem.id,
+        quantity: item.quantity,
+        price: item.menuItem.price
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItemsData);
+
+      if (itemsError) throw itemsError;
+
+      // Update table status
+      const { error: tableError } = await supabase
+        .from('restaurant_tables')
+        .update({ status: 'occupied' })
+        .eq('id', selectedTable);
+
+      if (tableError) throw tableError;
+
+      // Refresh data
+      await loadInitialData();
+      
+      setCurrentView('dashboard');
+      setSelectedTable(null);
+    } catch (error) {
+      console.error('Error placing order:', error);
+      // Could add toast notification here
+    }
   };
 
   const handleBackToDashboard = () => {
