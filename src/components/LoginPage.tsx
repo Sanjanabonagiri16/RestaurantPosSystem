@@ -78,29 +78,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     }
     const { user } = data;
     if (!user) {
-      console.error('Sign up failed: No user returned from Supabase Auth', data);
       toast.error('Sign up failed: No user returned.');
-      setSignUpLoading(false);
-      return;
-    }
-    // 2. Insert into public.users
-    console.log('Attempting to insert user profile:', {
-      username: signUpUsername,
-      password_hash: 'supabase_auth',
-      role: 'waiter',
-      auth_user_id: user.id,
-    });
-    const { error: insertError } = await supabase
-      .from('users')
-      .insert({
-        username: signUpUsername,
-        password_hash: 'supabase_auth', // Not used, but required by schema
-        role: 'waiter', // Default role
-        auth_user_id: user.id, // Ensure this is set and unique
-      });
-    if (insertError) {
-      console.error('Insert user profile error:', insertError);
-      toast.error('Sign up failed: ' + insertError.message);
       setSignUpLoading(false);
       return;
     }
