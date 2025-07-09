@@ -1,0 +1,45 @@
+@keyframes badge-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 99, 132, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 99, 132, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 99, 132, 0); }
+}
+
+@keyframes badge-glow {
+  0%, 100% { box-shadow: 0 0 8px 2px #ff6a00, 0 0 16px 4px #ee0979; }
+  50% { box-shadow: 0 0 16px 4px #ee0979, 0 0 32px 8px #ff6a00; }
+}
+
+@keyframes fade-slide-in {
+  0% { opacity: 0; transform: translateY(30px) scale(0.98); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+.animate-badge-pulse {
+  animation: badge-pulse 1.5s infinite;
+}
+
+.animate-badge-glow {
+  animation: badge-glow 2s infinite alternate;
+}
+
+.animate-fade-slide-in {
+  animation: fade-slide-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-float {
+  animation: float 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-on-hover {
+  0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.3); }
+  70% { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+}
+.animate-pulse-on-hover:hover {
+  animation: pulse-on-hover 1s;
+} 

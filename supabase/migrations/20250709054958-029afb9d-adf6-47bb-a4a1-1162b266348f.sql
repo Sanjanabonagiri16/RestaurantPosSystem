@@ -2,7 +2,7 @@
 CREATE TYPE user_role AS ENUM ('waiter', 'admin');
 
 -- Create enum for table status
-CREATE TYPE table_status AS ENUM ('available', 'occupied');
+CREATE TYPE table_status AS ENUM ('available', 'occupied', 'reserved');
 
 -- Create enum for order status
 CREATE TYPE order_status AS ENUM ('active', 'preparing', 'served');
@@ -83,22 +83,60 @@ CREATE POLICY "Everyone can create order items" ON public.order_items FOR INSERT
 
 -- Insert initial data
 
--- Create 16 restaurant tables
+-- Create 32 restaurant tables
 INSERT INTO public.restaurant_tables (id, status) 
 SELECT 
-  generate_series(1, 16),
-  CASE WHEN random() > 0.7 THEN 'occupied'::table_status ELSE 'available'::table_status END;
+  gs,
+  CASE 
+    WHEN random() > 0.8 THEN 'reserved'::table_status
+    WHEN random() > 0.6 THEN 'occupied'::table_status
+    ELSE 'available'::table_status
+  END
+FROM generate_series(1, 32) AS gs;
 
 -- Insert sample menu items
 INSERT INTO public.menu_items (name, price, category) VALUES
+  -- Starters
+  ('Garlic Bread', 5.99, 'Starters'),
+  ('Bruschetta', 6.99, 'Starters'),
+  ('Mozzarella Sticks', 7.99, 'Starters'),
+  ('Chicken Wings', 8.99, 'Starters'),
+  -- Pizza
   ('Margherita Pizza', 12.99, 'Pizza'),
+  ('Pepperoni Pizza', 13.99, 'Pizza'),
+  ('Veggie Supreme Pizza', 14.49, 'Pizza'),
+  ('BBQ Chicken Pizza', 15.49, 'Pizza'),
+  -- Salads
   ('Caesar Salad', 8.99, 'Salads'),
+  ('Greek Salad', 9.49, 'Salads'),
+  ('Caprese Salad', 10.49, 'Salads'),
+  -- Mains
   ('Grilled Chicken', 15.99, 'Mains'),
   ('Fish & Chips', 14.99, 'Mains'),
+  ('Beef Burger', 13.99, 'Mains'),
+  ('Veggie Burger', 12.49, 'Mains'),
+  ('Steak Frites', 19.99, 'Mains'),
+  ('Lamb Chops', 21.99, 'Mains'),
+  -- Pasta
   ('Pasta Carbonara', 13.99, 'Pasta'),
+  ('Pasta Alfredo', 12.99, 'Pasta'),
+  ('Spaghetti Bolognese', 14.49, 'Pasta'),
+  ('Penne Arrabbiata', 11.99, 'Pasta'),
+  -- Desserts
   ('Chocolate Cake', 6.99, 'Desserts'),
+  ('Tiramisu', 7.49, 'Desserts'),
+  ('Cheesecake', 7.99, 'Desserts'),
+  ('Ice Cream Sundae', 5.99, 'Desserts'),
+  ('Fruit Tart', 6.49, 'Desserts'),
+  -- Beverages
   ('Coffee', 3.99, 'Beverages'),
-  ('Orange Juice', 4.99, 'Beverages');
+  ('Espresso', 2.99, 'Beverages'),
+  ('Cappuccino', 4.49, 'Beverages'),
+  ('Orange Juice', 4.99, 'Beverages'),
+  ('Lemonade', 3.99, 'Beverages'),
+  ('Sparkling Water', 2.49, 'Beverages'),
+  ('Iced Tea', 3.49, 'Beverages'),
+  ('Cola', 2.99, 'Beverages');
 
 -- Insert demo users
 INSERT INTO public.users (username, password_hash, role) VALUES

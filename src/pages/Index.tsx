@@ -5,10 +5,12 @@ import LoginPage from '../components/LoginPage';
 import Dashboard from '../components/Dashboard';
 import OrderView from '../components/OrderView';
 import AdminView from '../components/AdminView';
+import { toast } from '@/components/ui/sonner';
 
 export interface User {
   username: string;
   role: 'waiter' | 'admin';
+  id: string; // Added for order placement
 }
 
 export interface Table {
@@ -36,6 +38,8 @@ export interface Order {
   total: number;
   status: 'active' | 'preparing' | 'served';
   timestamp: Date;
+  userId?: string;
+  username?: string;
 }
 
 const Index = () => {
@@ -50,6 +54,28 @@ const Index = () => {
   // Load data from Supabase
   useEffect(() => {
     loadInitialData();
+
+    // Real-time subscriptions
+    const tableSub = supabase
+      .channel('tables-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'restaurant_tables' }, (payload) => {
+        toast.success('Table update detected!');
+        loadInitialData();
+      })
+      .subscribe();
+
+    const orderSub = supabase
+      .channel('orders-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+        toast.success('Order update detected!');
+        loadOrders();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(tableSub);
+      supabase.removeChannel(orderSub);
+    };
   }, []);
 
   const loadInitialData = async () => {
@@ -89,6 +115,7 @@ const Index = () => {
       await loadOrders();
     } catch (error) {
       console.error('Error loading initial data:', error);
+      toast.error('Error loading initial data');
     } finally {
       setLoading(false);
     }
@@ -100,6 +127,7 @@ const Index = () => {
         .from('orders')
         .select(`
           *,
+          user:user_id (username),
           order_items (
             *,
             menu_items (*)
@@ -108,9 +136,11 @@ const Index = () => {
         .order('created_at', { ascending: false });
 
       if (ordersData) {
-        const formattedOrders = ordersData.map(order => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const formattedOrders = ordersData.map((order: any) => ({
           id: order.id,
           tableId: order.table_id,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           items: order.order_items.map((item: any) => ({
             menuItem: {
               id: item.menu_items.id,
@@ -122,7 +152,9 @@ const Index = () => {
           })),
           total: parseFloat(order.total.toString()),
           status: order.status as 'active' | 'preparing' | 'served',
-          timestamp: new Date(order.created_at)
+          timestamp: new Date(order.created_at),
+          userId: order.user_id,
+          username: order.user?.username || undefined,
         }));
         setOrders(formattedOrders);
       }
@@ -150,7 +182,7 @@ const Index = () => {
   };
 
   const handleOrderPlace = async (orderItems: OrderItem[]) => {
-    if (!selectedTable) return;
+    if (!selectedTable || !user) return;
 
     try {
       const total = orderItems.reduce((sum, item) => sum + (item.menuItem.price * item.quantity), 0);
@@ -161,7 +193,8 @@ const Index = () => {
         .insert({
           table_id: selectedTable,
           total: total,
-          status: 'active'
+          status: 'active',
+          user_id: user.id // Pass user id
         })
         .select()
         .single();
@@ -195,15 +228,71 @@ const Index = () => {
       
       setCurrentView('dashboard');
       setSelectedTable(null);
+      toast.success('Order placed!');
     } catch (error) {
       console.error('Error placing order:', error);
-      // Could add toast notification here
+      toast.error('Error placing order');
     }
   };
 
   const handleBackToDashboard = () => {
     setCurrentView(user?.role === 'admin' ? 'admin' : 'dashboard');
     setSelectedTable(null);
+  };
+
+  const handleStartPreparing = async (orderId: string) => {
+    try {
+      await supabase
+        .from('orders')
+        .update({ status: 'preparing' })
+        .eq('id', orderId);
+      await loadOrders();
+    } catch (error) {
+      console.error('Error updating order status:', error);
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      // Only 'active', 'preparing', 'served' are valid. We'll use 'served' to indicate removal/cancellation.
+      await supabase
+        .from('orders')
+        .update({ status: 'served' })
+        .eq('id', orderId);
+      await loadOrders();
+      toast.success('Order cancelled!');
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error('Error cancelling order');
+    }
+  };
+
+  const handleReserveTable = async (tableId: number) => {
+    try {
+      await supabase
+        .from('restaurant_tables')
+        .update({ status: 'reserved' })
+        .eq('id', tableId);
+      await loadInitialData();
+      toast.success('Table reserved!');
+    } catch (error) {
+      console.error('Error reserving table:', error);
+      toast.error('Error reserving table');
+    }
+  };
+
+  const handleUnreserveTable = async (tableId: number) => {
+    try {
+      await supabase
+        .from('restaurant_tables')
+        .update({ status: 'available' })
+        .eq('id', tableId);
+      await loadInitialData();
+      toast.success('Table unreserved!');
+    } catch (error) {
+      console.error('Error unreserving table:', error);
+      toast.error('Error unreserving table');
+    }
   };
 
   if (!user) {
@@ -219,6 +308,8 @@ const Index = () => {
           onTableSelect={handleTableSelect}
           onLogout={handleLogout}
           onViewAdmin={() => setCurrentView('admin')}
+          onReserveTable={handleReserveTable}
+          onUnreserveTable={handleUnreserveTable}
         />
       )}
       
@@ -237,6 +328,10 @@ const Index = () => {
           tables={tables}
           onBack={handleBackToDashboard}
           onLogout={handleLogout}
+          onStartPreparing={handleStartPreparing}
+          onCancelOrder={handleCancelOrder}
+          onViewOrderHistory={() => {}}
+          user={user}
         />
       )}
     </div>

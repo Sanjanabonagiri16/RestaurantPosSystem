@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MenuItem, OrderItem } from '../pages/Index';
+import './AdminViewAnimations.css';
 
 interface OrderViewProps {
   tableId: number;
@@ -65,7 +66,7 @@ const OrderView: React.FC<OrderViewProps> = ({
   return (
     <div 
       className="min-h-screen relative"
-      style={{ background: 'var(--gradient-bg)' }}
+      style={{ background: 'var(--gradient-order)' }}
     >
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
@@ -111,7 +112,7 @@ const OrderView: React.FC<OrderViewProps> = ({
                         return (
                           <Card
                             key={item.id}
-                            className="backdrop-blur-md bg-white/10 border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
+                            className="backdrop-blur-md bg-white/10 border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 animate-fade-slide-in"
                           >
                             <CardContent className="p-6">
                               <div className="flex justify-between items-start mb-4">
@@ -124,7 +125,7 @@ const OrderView: React.FC<OrderViewProps> = ({
                                   </p>
                                 </div>
                                 <Badge 
-                                  className="text-white font-bold px-3 py-1"
+                                  className="text-white font-bold px-3 py-1 animate-badge-pulse"
                                   style={{ background: 'var(--gradient-success)' }}
                                 >
                                   ${item.price.toFixed(2)}
@@ -177,7 +178,7 @@ const OrderView: React.FC<OrderViewProps> = ({
               <Card className="sticky top-8 backdrop-blur-md bg-white/10 border-white/20 shadow-2xl">
                 <CardHeader>
                   <div className="flex items-center space-x-3">
-                    <div className="p-3 rounded-xl bg-white/20">
+                    <div className="p-3 rounded-xl bg-white/20 animate-float">
                       <ShoppingCart className="w-6 h-6 text-white" />
                     </div>
                     <CardTitle className="text-white text-xl">Order Summary</CardTitle>

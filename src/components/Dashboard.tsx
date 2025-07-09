@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { User, Table } from '../pages/Index';
+import './AdminViewAnimations.css';
+import { toast } from '@/components/ui/sonner';
 
 interface DashboardProps {
   user: User;
@@ -11,6 +13,8 @@ interface DashboardProps {
   onTableSelect: (tableId: number) => void;
   onLogout: () => void;
   onViewAdmin: () => void;
+  onReserveTable: (tableId: number) => void;
+  onUnreserveTable: (tableId: number) => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -19,6 +23,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   onTableSelect,
   onLogout,
   onViewAdmin,
+  onReserveTable,
+  onUnreserveTable,
 }) => {
   const availableTables = tables.filter(t => t.status === 'available').length;
   const occupiedTables = tables.filter(t => t.status === 'occupied').length;
@@ -53,7 +59,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div 
       className="min-h-screen relative"
-      style={{ background: 'var(--gradient-bg)' }}
+      style={{ background: 'var(--gradient-dashboard)' }}
     >
       {/* Animated background elements */}
       <div className="absolute inset-0 overflow-hidden">
@@ -104,9 +110,9 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
               {/* Table Management Card */}
               <Card className="lg:col-span-2 backdrop-blur-md bg-white/10 border-white/20 shadow-2xl">
-                <CardHeader>
+                <CardHeader className="animate-fade-slide-in">
                   <div className="flex items-center space-x-3">
-                    <div className="p-3 rounded-xl bg-white/20">
+                    <div className="p-3 rounded-xl bg-white/20 animate-float">
                       <Users className="w-6 h-6 text-white" />
                     </div>
                     <div>
@@ -126,10 +132,10 @@ const Dashboard: React.FC<DashboardProps> = ({
               </Card>
 
               {/* User Info Card */}
-              <Card className="backdrop-blur-md bg-white/10 border-white/20 shadow-2xl">
+              <Card className="backdrop-blur-md bg-white/10 border-white/20 shadow-2xl animate-fade-slide-in">
                 <CardHeader>
                   <div className="flex items-center space-x-3">
-                    <div className="p-3 rounded-xl bg-white/20">
+                    <div className="p-3 rounded-xl bg-white/20 animate-float">
                       <UserIcon className="w-6 h-6 text-white" />
                     </div>
                     <CardTitle className="text-white text-xl">User Info</CardTitle>
@@ -180,43 +186,67 @@ const Dashboard: React.FC<DashboardProps> = ({
               {tables.map((table) => (
                 <Card
                   key={table.id}
-                  className="backdrop-blur-md bg-white/10 border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer"
+                  className="backdrop-blur-md bg-white/10 border-white/20 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 cursor-pointer animate-fade-slide-in"
                   onClick={() => table.status === 'available' && user.role === 'waiter' && onTableSelect(table.id)}
+                  role="region"
+                  aria-label={`Table ${table.id} (${getStatusText(table.status)})`}
+                  tabIndex={0}
                 >
                   <CardContent className="p-6 text-center space-y-4">
-                    <h3 className="text-2xl font-bold text-white">Table {table.id}</h3>
-                    
+                    <h3 className="text-2xl font-bold text-white" id={`table-title-${table.id}`}>Table {table.id}</h3>
                     {/* Status Bar */}
                     <div 
                       className="h-2 rounded-full mx-4"
                       style={{ background: getStatusColor(table.status) }}
+                      aria-label={`Status: ${getStatusText(table.status)}`}
                     ></div>
-                    
                     <div className="flex items-center justify-center space-x-2 text-white/80">
-                      <Users className="w-4 h-4" />
+                      <Users className="w-4 h-4" aria-hidden="true" />
                       <span>{table.seatCount || 4} seats</span>
                     </div>
-                    
-                    {table.status === 'available' && user.role === 'waiter' ? (
-                      <Button 
-                        className="w-full h-10 font-semibold backdrop-blur-sm border border-white/30 text-white"
-                        style={{ background: 'var(--gradient-primary)' }}
-                      >
-                        Select Table
-                      </Button>
-                    ) : (
+                    {table.status === 'available' && (
+                      <div className="flex flex-col gap-2">
+                        {user.role === 'waiter' && (
+                          <Button 
+                            className="w-full h-10 font-semibold backdrop-blur-sm border border-white/30 text-white"
+                            style={{ background: 'var(--gradient-primary)' }}
+                            onClick={() => onTableSelect(table.id)}
+                          >
+                            Select Table
+                          </Button>
+                        )}
+                        <Button
+                          className="w-full h-10 font-semibold backdrop-blur-sm border border-yellow-400/30 text-yellow-200"
+                          style={{ background: 'var(--gradient-warning)' }}
+                          onClick={() => onReserveTable(table.id)}
+                        >
+                          Reserve Table
+                        </Button>
+                      </div>
+                    )}
+                    {table.status === 'reserved' && (
+                      <div className="w-full h-10 rounded-lg flex items-center justify-center text-yellow-300 font-medium border border-yellow-400/30 bg-yellow-900/20">
+                        Reserved
+                        {user.role === 'admin' && (
+                          <Button
+                            size="sm"
+                            className="ml-4 px-3 py-1 text-xs font-semibold border border-yellow-400/30 text-yellow-200 bg-yellow-900/40"
+                            onClick={() => onUnreserveTable(table.id)}
+                          >
+                            Unreserve
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {table.status === 'occupied' && (
                       <div 
                         className="w-full h-10 rounded-lg flex items-center justify-center text-white/90 font-medium"
                         style={{ 
-                          background: table.status === 'occupied' 
-                            ? 'rgba(239, 68, 68, 0.2)' 
-                            : table.status === 'reserved'
-                            ? 'rgba(245, 158, 11, 0.2)'
-                            : 'rgba(156, 163, 175, 0.2)',
+                          background: 'rgba(239, 68, 68, 0.2)',
                           border: '1px solid rgba(255, 255, 255, 0.3)'
                         }}
                       >
-                        {getStatusText(table.status)}
+                        Occupied
                       </div>
                     )}
                   </CardContent>
